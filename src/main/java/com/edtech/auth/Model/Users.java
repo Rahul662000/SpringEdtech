@@ -3,6 +3,10 @@ package com.edtech.auth.Model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -79,37 +83,18 @@ public class Users {
 
     @Column(nullable = true)
     private String contactNumber;
-    
-     
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Users{");
-        sb.append("id=").append(id);
-        sb.append(", firstName=").append(firstName);
-        sb.append(", lastName=").append(lastName);
-        sb.append(", email=").append(email);
-        sb.append(", password=").append(password);
-        sb.append(", accountType=").append(accountType);
-        sb.append(", image=").append(image);
-        sb.append(", token=").append(token);
-        sb.append(", resetPasswordExpires=").append(resetPasswordExpires);
-        sb.append(", active=").append(active);
-        sb.append(", approved=").append(approved);
-        sb.append(", createdAt=").append(createdAt);
-        sb.append(", updatedAt=").append(updatedAt);
-        sb.append('}');
-        return sb.toString();
-    }
 
-    @OneToOne
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    // @JsonManagedReference
     private AdditionalDetails userProfile;
 
-    @OneToMany
-    private List<Course> EnrolledCourses;
+    @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<Course> Courses;
 
     // 📈 Course Progress tracked for students
-    @OneToMany
+    @OneToMany(mappedBy = "userId", cascade = CascadeType.ALL)
+    // @JsonBackReference
     private List<CourseProgress> courseProgress;
 
     

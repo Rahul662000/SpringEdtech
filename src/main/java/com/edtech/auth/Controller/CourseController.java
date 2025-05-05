@@ -2,39 +2,38 @@ package com.edtech.auth.Controller;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.edtech.auth.DTO.CourseRequestDto;
+import com.edtech.auth.DTO.StandardApiResDTO;
+import com.edtech.auth.Model.Category;
 import com.edtech.auth.Model.Course;
 import com.edtech.auth.Model.Users;
 import com.edtech.auth.Repo.CategoryRepo;
 import com.edtech.auth.Repo.CourseRepo;
 import com.edtech.auth.Repo.UserRepo;
-import com.edtech.auth.Services.CourseService;
 import com.edtech.auth.Services.JWTService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @RestController
-@RequestMapping("/api/v1/Course")
+@RequestMapping("/api/v1/course")
 @PreAuthorize("hasRole('INSTRUCTOR')")
 public class CourseController {
-
-    @Autowired
-    CourseService courseService;
 
     @Autowired
     JWTService jwtService;
@@ -48,15 +47,15 @@ public class CourseController {
     @Autowired
     CourseRepo courseRepo;
 
-
-
-    public ResponseEntity<?> createCourse(@ModelAttribute CourseRequestDto requestDto,  @RequestHeader("Authorization") String token) throws IOException{
+    @PostMapping("/createCourse")
+    public ResponseEntity<?> createCourse(@ModelAttribute CourseRequestDto requestDto, 
+    @RequestHeader("Authorization") String token) throws IOException{
 
         String jwtToken = token.substring(7);
         String userId = jwtService.extractId(jwtToken);
         String accountType = jwtService.extractAccountType(jwtToken);
-
-        if (!accountType.equalsIgnoreCase("Instructor")) {
+    
+        if (!accountType.equalsIgnoreCase("INSTRUCTOR")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only instructors can create courses.");
         }
 
@@ -68,56 +67,62 @@ public class CourseController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("All fields are mandatory.");
         }
 
+    
         // Parse tag and instructions
         ObjectMapper objectMapper = new ObjectMapper();
         List<String> tags = objectMapper.readValue(requestDto.getTag(), new TypeReference<List<String>>() {});
-        List<String> instructions = objectMapper.readValue(requestDto.getInstructions(), new TypeReference<List<String>>() {});
+        List<String> instructionsList = objectMapper.readValue(requestDto.getInstructions(), new TypeReference<List<String>>() {});
 
-        // Save image locally
-        MultipartFile thumbnail = requestDto.getThumbnailImage();
-        String fileName = System.currentTimeMillis() + "_" + thumbnail.getOriginalFilename();
-        String uploadDir = "uploads/thumbnails/";
-        File uploadPath = new File(uploadDir);
-        if (!uploadPath.exists()) uploadPath.mkdirs();
-        File file = new File(uploadDir + fileName);
-        thumbnail.transferTo(file);
+        
+        // Handle thumbnail image upload
+        String uploadDir = new File("uploads/thumbnails").getAbsolutePath();
+        File directory = new File(uploadDir);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
 
+        String filename = System.currentTimeMillis() + "_" + requestDto.getThumbnailImage().getOriginalFilename();
+        File file = new File(directory, filename);
+
+        String relativePath = "uploads/thumbnails/" + filename;
+
+        // Save file
+        requestDto.getThumbnailImage().transferTo(file);
+    
         // Find instructor and category
         Users instructor = userRepo.findById(Long.valueOf(userId)).orElse(null);
-        if (instructor == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Instructor not found.");
+        if (instructor == null)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Instructor not found.");
+    
+        Long categoryId = (categoryRepo.findByName(requestDto.getCategory())).getId();
+        
+        Category categoryEntity = categoryRepo.findById(categoryId).orElse(null);
+        if (categoryEntity == null)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Category not found.");
 
-        Category category = categoryRepo.findById(Long.valueOf(requestDto.getCategory())).orElse(null);
-        if (category == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Category not found.");
-
-        // Create Course
+        // Create and save Course
         Course course = new Course();
         course.setCourseName(requestDto.getCourseName());
         course.setCourseDescription(requestDto.getCourseDescription());
         course.setWhatYouWillLearn(requestDto.getWhatYouWillLearn());
         course.setPrice(requestDto.getPrice());
         course.setInstructor(instructor);
-        course.setCategory(category);
-        course.setInstructions(instructions);
+        course.setCategory(categoryEntity);
+        course.setInstructions(instructionsList);
         course.setTag(tags);
-        course.setThumbnail("/" + uploadDir + fileName);  // store as relative path
-        course.setStatus(
-            requestDto.getStatus() != null && requestDto.getStatus().equalsIgnoreCase("Published") 
-            ? Course.Status.Published 
-            : Course.Status.Draft
-        );
-
+        course.setThumbnail(relativePath);
+        course.setStatus("Published".equalsIgnoreCase(requestDto.getStatus()) ? Course.Status.Published : Course.Status.Draft);
+    
         courseRepo.save(course);
-
-        // update instructor
-        instructor.getCourse().add(course);
+    
+        instructor.getCourses().add(course);
         userRepo.save(instructor);
-
-        // update category
-        category.getCourse().add(course);
-        categoryRepo.save(category);
-
-        return ResponseEntity.ok(course);
-
+    
+        categoryEntity.getCourse().add(course);
+        categoryRepo.save(categoryEntity);
+    
+        return ResponseEntity.ok(new StandardApiResDTO<>(true, "Course created successfully", course));
+    
     }
     
 }

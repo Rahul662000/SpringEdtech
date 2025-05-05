@@ -1,5 +1,7 @@
 package com.edtech.auth.Model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -32,5 +34,6 @@ public class AdditionalDetails {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
+    // @JsonBackReference
     private Users user;
 }

@@ -3,12 +3,15 @@ package com.edtech.auth.Model;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -36,15 +39,18 @@ public class Course {
 
     @ManyToOne
     @JoinColumn(name = "instructor_id", referencedColumnName = "id")
+    // @JsonManagedReference("course-instructor")
     private Users instructor;
 
     @Column(length = 1000)
     private String whatYouWillLearn;
 
-    @OneToMany
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true , fetch = FetchType.EAGER)
+    // @JsonManagedReference
     private List<Section> courseContent;
 
     @OneToMany(mappedBy = "course")
+    // @JsonManagedReference
     private List<RatingAndReview> ratingAndReview;
 
     private Double price;
@@ -55,6 +61,7 @@ public class Course {
     private List<String> tag;
 
     @ManyToOne
+    @JoinColumn(name = "category_id")
     private Category category;
 
     @ManyToMany
@@ -72,4 +79,14 @@ public class Course {
     public enum Status {
         Draft, Published
     }
+
+    @Override
+    public String toString() {
+        return "Course [courseContent=" + courseContent + "]";
+    }
+    
+
+    
+
+
 }

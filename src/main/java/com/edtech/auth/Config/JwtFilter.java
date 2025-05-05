@@ -50,7 +50,7 @@ public class JwtFilter extends  OncePerRequestFilter{
 
                 String accountType = jwtService.extractAccountType(token);
 
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + accountType));
+                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + accountType.toUpperCase()));
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 

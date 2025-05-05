@@ -17,7 +17,7 @@ import com.edtech.auth.Repo.CategoryRepo;
 import com.edtech.auth.Services.CategoryService;
 
 @RestController
-@RequestMapping("/api/v1/Course")
+@RequestMapping("/api/v1/course")
 public class CategoryController{
 
     @Autowired

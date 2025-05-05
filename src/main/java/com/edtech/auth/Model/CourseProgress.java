@@ -2,6 +2,8 @@ package com.edtech.auth.Model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,9 +22,11 @@ public class CourseProgress {
     private Long id;
 
     @ManyToOne
+    // @JsonBackReference
     private Course courseId;
 
     @ManyToOne
+    // @JsonBackReference
     private Users userId;
 
     @ManyToMany
