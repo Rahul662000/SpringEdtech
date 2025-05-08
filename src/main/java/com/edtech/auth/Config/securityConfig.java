@@ -23,14 +23,20 @@ class SecurityConstants {
         "/api/v1/auth/login",
         "/sendMail",
         "/api/v1/auth/sendotp",
-        "/api/v1/course/showAllCategories",
-        "/"
+        "/",
+        "/thumbnails/**",
+        "/profilePicture/**",
+        "/api/v1/course/showAllCategories"
     };
 
     public static final String[] STUDENT_ENDPOINT = {"/student/**"};
     public static final String[] INSTRUCTOR_ENDPOINT = {
         "/api/v1/course/createCourse",
-        "/api/v1/course/addSection"
+        "/api/v1/course/editCourse",
+        "/api/v1/course/addSection",
+        "/api/v1/course/addSubSection",
+        "/api/v1/course/getInstructorCourses",
+        "/api/v1/profile/instructor"
     };
     public static final String[] ADMIN_ENDPOINT = {"/api/v1/course/createcategory"};
 }

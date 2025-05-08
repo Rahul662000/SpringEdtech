@@ -1,8 +1,10 @@
 package com.edtech.auth.Model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -26,13 +28,14 @@ public class Section {
 
     private String sectionName;
 
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    // @JsonManagedReference
-    private List<SubSection> subSections;
+    @OneToMany(mappedBy = "section", orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private List<SubSection> subSection = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "course_id")
-    // @JsonBackReference
+    // @JsonIgnoreProperties
+    @JsonBackReference
     private Course course;
 
 }

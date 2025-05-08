@@ -66,16 +66,6 @@ public class UserServices {
             return "Invalid OTP";
         }
 
-        // 5. Create profile entry
-        AdditionalDetails profile = AdditionalDetails.builder()
-            .gender(null)
-            .about(null)
-            .contactNumber(request.getContactNumber())
-            .dateOfBirth(null)
-            .build();
-
-        additionalDetailsRepo.save(profile);
-
         // 6. Generate default image
         String imageUrl = "https://api.dicebear.com/5.x/initials/svg?seed=" + request.getFirstName() + " " + request.getLastName();
 
@@ -92,8 +82,19 @@ public class UserServices {
             .contactNumber(request.getContactNumber())
             .image(imageUrl)
             .approved(approved)
-            .userProfile(profile)
+            // .userProfile(profile)
             .build();
+
+        // 5. Create profile entry
+        AdditionalDetails profile = AdditionalDetails.builder()
+            .gender(null)
+            .about(null)
+            .contactNumber(request.getContactNumber())
+            .dateOfBirth(null)
+            .user(user)
+            .build();
+
+        user.setUserProfile(profile);
 
         userRepo.save(user);
 

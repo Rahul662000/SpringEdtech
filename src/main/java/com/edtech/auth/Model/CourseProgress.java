@@ -3,6 +3,7 @@ package com.edtech.auth.Model;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -22,12 +23,14 @@ public class CourseProgress {
     private Long id;
 
     @ManyToOne
-    // @JsonBackReference
-    private Course courseId;
+    @JoinColumn(name = "course_id")
+    @JsonIgnoreProperties({"courseContent", "ratingAndReview", "instructor", "category", "enrolledStudents", "instructions"})
+    private Course course;
 
     @ManyToOne
-    // @JsonBackReference
-    private Users userId;
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"courses", "courseProgress", "userProfile"})
+    private Users user;
 
     @ManyToMany
     private List<SubSection> completedVideos;

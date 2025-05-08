@@ -85,16 +85,15 @@ public class Users {
     private String contactNumber;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    // @JsonManagedReference
+    @JsonManagedReference
     private AdditionalDetails userProfile;
 
     @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL)
     @JsonIgnore
-    private List<Course> Courses;
+    private List<Course> courses;
 
-    // 📈 Course Progress tracked for students
-    @OneToMany(mappedBy = "userId", cascade = CascadeType.ALL)
-    // @JsonBackReference
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<CourseProgress> courseProgress;
 
     

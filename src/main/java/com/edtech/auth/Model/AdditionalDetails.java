@@ -32,8 +32,8 @@ public class AdditionalDetails {
     private String about;
     private String contactNumber;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
-    // @JsonBackReference
+    @JsonBackReference
     private Users user;
 }

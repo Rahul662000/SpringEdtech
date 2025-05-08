@@ -1,8 +1,11 @@
 package com.edtech.auth.Model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -23,6 +26,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import lombok.Data;
+import net.minidev.json.annotate.JsonIgnore;
 
 @Data
 @Entity
@@ -40,18 +44,21 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "instructor_id", referencedColumnName = "id")
     // @JsonManagedReference("course-instructor")
+    // @JsonBackReference
+    @JsonIgnore
     private Users instructor;
 
     @Column(length = 1000)
     private String whatYouWillLearn;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true , fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("course")
     // @JsonManagedReference
-    private List<Section> courseContent;
+    private List<Section> courseContent = new ArrayList<>();
 
-    @OneToMany(mappedBy = "course")
-    // @JsonManagedReference
-    private List<RatingAndReview> ratingAndReview;
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("course")
+    private List<RatingAndReview> ratingAndReview = new ArrayList<>();
 
     private Double price;
 
@@ -62,9 +69,12 @@ public class Course {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
+    // @JsonBackReference
+    @JsonIgnoreProperties("course")
     private Category category;
 
     @ManyToMany
+    @JsonIgnoreProperties
     private List<Users> enrolledStudents;
 
     @ElementCollection

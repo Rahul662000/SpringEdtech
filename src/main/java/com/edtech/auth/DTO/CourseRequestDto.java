@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 public class CourseRequestDto {
 
+    private String courseId;
     private String courseName;
     private String courseDescription;
     private String whatYouWillLearn;
@@ -16,5 +17,6 @@ public class CourseRequestDto {
     private String instructions;      // JSON string
     private String tag;               // JSON string
     private MultipartFile thumbnailImage;
+    private Long InstructorId;
     
 }

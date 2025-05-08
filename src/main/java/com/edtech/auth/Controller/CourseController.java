@@ -2,25 +2,38 @@ package com.edtech.auth.Controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.edtech.auth.DTO.CourseRequestDto;
+import com.edtech.auth.DTO.FullCourseDetailsResponse;
 import com.edtech.auth.DTO.StandardApiResDTO;
 import com.edtech.auth.Model.Category;
 import com.edtech.auth.Model.Course;
+import com.edtech.auth.Model.CourseProgress;
+import com.edtech.auth.Model.Section;
+import com.edtech.auth.Model.SubSection;
 import com.edtech.auth.Model.Users;
 import com.edtech.auth.Repo.CategoryRepo;
+import com.edtech.auth.Repo.CourseProgressRepo;
 import com.edtech.auth.Repo.CourseRepo;
 import com.edtech.auth.Repo.UserRepo;
 import com.edtech.auth.Services.JWTService;
@@ -46,6 +59,9 @@ public class CourseController {
 
     @Autowired
     CourseRepo courseRepo;
+
+    @Autowired
+    CourseProgressRepo courseProgressRepo;
 
     @PostMapping("/createCourse")
     public ResponseEntity<?> createCourse(@ModelAttribute CourseRequestDto requestDto, 
@@ -84,7 +100,7 @@ public class CourseController {
         String filename = System.currentTimeMillis() + "_" + requestDto.getThumbnailImage().getOriginalFilename();
         File file = new File(directory, filename);
 
-        String relativePath = "uploads/thumbnails/" + filename;
+        String relativePath = "thumbnails/" + filename;
 
         // Save file
         requestDto.getThumbnailImage().transferTo(file);
@@ -94,7 +110,9 @@ public class CourseController {
         if (instructor == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Instructor not found.");
     
-        Long categoryId = (categoryRepo.findByName(requestDto.getCategory())).getId();
+            Long categoryId = Long.parseLong(requestDto.getCategory());
+
+        // Long categoryId = (categoryRepo.findByName(requestDto.getCategory())).getId();
         
         Category categoryEntity = categoryRepo.findById(categoryId).orElse(null);
         if (categoryEntity == null)
@@ -125,4 +143,165 @@ public class CourseController {
     
     }
     
+    @PostMapping(value = "/editCourse" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> editCourse(@ModelAttribute CourseRequestDto request)
+    {
+        try {
+            
+            Long courseId = Long.parseLong(request.getCourseId());
+
+            Optional<Course> optionalCourse = courseRepo.findById(courseId);
+            if (optionalCourse.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "Course not found"));
+            }
+
+            Course course = optionalCourse.get();
+
+            MultipartFile thumbnailImage = request.getThumbnailImage();
+            if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
+                String uploadDir = new File("uploads/thumbnails").getAbsolutePath();
+                File directory = new File(uploadDir);
+                if (!directory.exists()) directory.mkdirs();
+
+                String filename = System.currentTimeMillis() + "_" + thumbnailImage.getOriginalFilename();
+                File imageFile = new File(directory, filename);
+                thumbnailImage.transferTo(imageFile);
+                course.setThumbnail("thumbnails/" + filename);
+
+            }
+            // ✅ Update fields if not null
+            if (request.getCourseName() != null) course.setCourseName(request.getCourseName());
+            if (request.getCourseDescription() != null) course.setCourseDescription(request.getCourseDescription());
+            if (request.getWhatYouWillLearn() != null) course.setWhatYouWillLearn(request.getWhatYouWillLearn());
+            if (request.getPrice() != null) course.setPrice(request.getPrice());
+            if (request.getStatus() != null) course.setStatus("Published".equalsIgnoreCase(request.getStatus()) ? Course.Status.Published : Course.Status.Draft);
+
+            // ✅ Handle JSON string fields (tags and instructions)
+            ObjectMapper mapper = new ObjectMapper();
+            if (request.getTag() != null) {
+                List<String> tags = mapper.readValue(request.getTag(), new TypeReference<>() {});
+                course.setTag(tags);
+            }
+            if (request.getInstructions() != null) {
+                List<String> instructions = mapper.readValue(request.getInstructions(), new TypeReference<>() {});
+                course.setInstructions(instructions);
+            }
+
+
+            // Save updated course
+            Course updatedCourse = courseRepo.save(course);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Course updated successfully",
+                "data", updatedCourse
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Internal server error",
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/getInstructorCourses")
+    public ResponseEntity<?> getInstructorCourses( @RequestHeader("Authorization") String token) {
+
+        try {
+            String jwtToken = token.substring(7);
+            String userId = jwtService.extractId(jwtToken);
+            String accountType = jwtService.extractAccountType(jwtToken);
+        
+            if (!accountType.equalsIgnoreCase("INSTRUCTOR")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only instructors can access Instructor Courses.");
+            }
+
+            Long instructorId = Long.parseLong(userId);
+
+            List<Course> instructorCourses = courseRepo
+                    .findByInstructorIdOrderByCreatedAtDesc(instructorId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", instructorCourses
+            ));   
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Failed to retrieve instructor courses",
+                    "error", e.getMessage()
+            ));
+        }
+
+    }
+
+    @PostMapping("/getFullCourseDetails")
+    public ResponseEntity<?> getFullCourseDetails(@RequestBody Map<String, String> request , @RequestHeader("Authorization") String token) {
+    try {
+        String jwtToken = token.substring(7);
+            String userId = jwtService.extractId(jwtToken);
+            String accountType = jwtService.extractAccountType(jwtToken);
+        
+        if (!accountType.equalsIgnoreCase("INSTRUCTOR")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only instructors can access Instructor Courses.");
+        }
+
+        Long instructorId = Long.parseLong(userId);
+        Long courseId = Long.parseLong(request.get("courseId"));
+        // String userEmail = principal.getName(); // assumes Spring Security with email-based login
+
+        // Fetch user
+        Users user = userRepo.findById(instructorId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Fetch course with all necessary joins (use custom JPQL or projections if needed)
+        Course courseDetails = courseRepo.findCourseWithDetailsById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        // Get Course Progress
+        Optional<CourseProgress> progressOpt = courseProgressRepo.findByCourseIdAndUserId(courseId, user.getId());
+
+         // Calculate total duration without using streams
+        int totalDurationInSeconds = 0;
+        for (Section section : courseDetails.getCourseContent()) {
+            for (SubSection subSection : section.getSubSection()) {
+                try {
+                    totalDurationInSeconds += Integer.parseInt(subSection.getTimeDuration());
+                } catch (NumberFormatException e) {
+                    // You can log or handle the invalid duration format here if needed
+                }
+            }
+        }
+
+        String formattedDuration = convertSecondsToDuration(totalDurationInSeconds);
+
+        // Response DTO
+        FullCourseDetailsResponse response = new FullCourseDetailsResponse(
+            courseDetails,
+            formattedDuration,
+            progressOpt.map(CourseProgress::getCompletedVideos).orElse(List.of())
+        );
+
+        return ResponseEntity.ok().body(Map.of("success", true, "data", response));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", e.getMessage()));
+        }
+
+    }
+
+    private String convertSecondsToDuration(int totalSeconds) {
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+
+        StringBuilder duration = new StringBuilder();
+        if (hours > 0) duration.append(hours).append("h ");
+        if (minutes > 0 || hours > 0) duration.append(minutes).append("m ");
+        duration.append(seconds).append("s");
+
+        return duration.toString().trim();
+    }
 }

@@ -1,6 +1,7 @@
 package com.edtech.auth.Model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +19,8 @@ public class RatingAndReview {
     private Long id;
 
     @ManyToOne
-    // @JsonBackRe/ference
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"courses", "courseProgress", "userProfile"})
     private Users user;
 
     @Column(nullable = false)
