@@ -15,11 +15,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.edtech.auth.Controller.CategoryController.ApiResponse;
 import com.edtech.auth.DTO.DisplayPictureRequestDto;
 import com.edtech.auth.DTO.InstructorCourseDto;
+import com.edtech.auth.DTO.StandardApiResDTO;
 import com.edtech.auth.DTO.UpdateProfileDto;
 import com.edtech.auth.Model.AdditionalDetails;
 import com.edtech.auth.Model.Course;
@@ -182,6 +185,21 @@ public class ProfileController {
             ));
         }
 
+    }
+
+    @GetMapping("/getuserdetails")
+    public ResponseEntity<?> getUserAllDetails(@RequestParam Long userId) {
+        try {
+            Users userDetails = userRepo.findById(userId).orElse(null);
+
+            if (userDetails == null) {
+                return new ResponseEntity<>(new StandardApiResDTO<>(false, "User not found"), HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>(new StandardApiResDTO<>(true, "User Data Fetched Successfully", userDetails), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(new StandardApiResDTO<>(false, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 }
