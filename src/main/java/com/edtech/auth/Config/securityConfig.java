@@ -26,17 +26,28 @@ class SecurityConstants {
         "/",
         "/thumbnails/**",
         "/profilePicture/**",
-        "/api/v1/course/showAllCategories"
+        "/api/v1/course/showAllCategories",
+        "/api/v1/course/getcategorypagedetails",
+        "/api/v1/course/getCourseDetails",
+        "/api/v1/course/getReviews",
+        "/api/v1/course/getaveragerating"
     };
 
-    public static final String[] STUDENT_ENDPOINT = {"/student/**"};
+    public static final String[] STUDENT_ENDPOINT = {
+        "/api/v1/payment/capturePayment",
+        "/api/v1/payment/verifyPayment",
+        "/api/v1/payment/sendPaymentSuccessfullEmail",
+        "/api/v1/profile/getEnrolledCourses"
+    };
     public static final String[] INSTRUCTOR_ENDPOINT = {
         "/api/v1/course/createCourse",
         "/api/v1/course/editCourse",
         "/api/v1/course/addSection",
         "/api/v1/course/addSubSection",
         "/api/v1/course/getInstructorCourses",
-        "/api/v1/profile/instructor"
+        "/api/v1/profile/instructor",
+        "/api/v1/course/deleteCourse"
+
     };
     public static final String[] ADMIN_ENDPOINT = {"/api/v1/course/createcategory"};
 }

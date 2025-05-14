@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -16,6 +17,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
@@ -85,7 +87,7 @@ public class Users {
     private String contactNumber;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    @JsonManagedReference
+    @JsonIgnoreProperties("user")
     private AdditionalDetails userProfile;
 
     @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL)
@@ -95,6 +97,25 @@ public class Users {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<CourseProgress> courseProgress;
+
+    @ManyToMany(mappedBy = "enrolledStudents" , fetch = FetchType.EAGER)
+    @JsonIgnoreProperties({"enrolledStudents", "ratingAndReview"})
+    private List<Course> enrolledCourses;
+
+    public Users(Long id, String firstName, String lastName, String email, String accountType, String image,
+            String contactNumber, AdditionalDetails userProfile, List<Course> courses,
+            List<CourseProgress> courseProgress) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.accountType = accountType;
+        this.image = image;
+        this.contactNumber = contactNumber;
+        this.userProfile = userProfile;
+        this.courses = courses;
+        this.courseProgress = courseProgress;
+    }
 
     
     

@@ -1,21 +1,30 @@
 package com.edtech.auth.Controller;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edtech.auth.DTO.AuthResponse;
+import com.edtech.auth.DTO.EmailDetails;
 import com.edtech.auth.DTO.EmailRequest;
 import com.edtech.auth.DTO.OTPresponseDTO;
+import com.edtech.auth.DTO.PasswordResetDto;
 import com.edtech.auth.DTO.SignUpReponseDto;
 import com.edtech.auth.DTO.SignUpRequestDto;
 import com.edtech.auth.Model.Users;
+import com.edtech.auth.Repo.OTPRepo;
+import com.edtech.auth.Repo.UserRepo;
+import com.edtech.auth.Services.JWTService;
 import com.edtech.auth.Services.OTPService;
 import com.edtech.auth.Services.UserServices;
 
@@ -33,10 +42,25 @@ public class UserController {
     @Autowired
     private OTPService otpService;
 
+    @Autowired
+    private JWTService jwtService;
+
+    @Autowired
+    UserRepo userRepo;
+
+    @Autowired
+    OTPRepo otpRepo;
+
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+
     @PostMapping("/sendotp")
     public ResponseEntity<?> sendOtp(@RequestBody EmailRequest emailRequest) {
 
         String email = emailRequest.getEmail();
+
+        // Delete existing OTP for the same email
+        otpRepo.deleteByEmail(email);
+
         String otp = otpService.generateOTP(email);
 
         if (otp.contains("already")) {
@@ -94,4 +118,52 @@ public class UserController {
 
     }
 
+    @PostMapping("/changepassword")
+    public ResponseEntity<?> changePassowrd(@RequestBody PasswordResetDto request , @RequestHeader("Authorization") String token){
+
+        try {
+            
+            String jwtToken = token.substring(7);
+            String userId = jwtService.extractId(jwtToken);
+
+            Optional<Users> optionalUser = userRepo.findById(Long.parseLong(userId));
+
+            if (optionalUser.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", "User not found"));
+            }
+
+            Users user = optionalUser.get();
+
+            // Validate old password
+            if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("success", false, "message", "The password is incorrect"));
+            }
+
+            // Update password
+            user.setPassword(encoder.encode(request.getNewPassword()));
+            userRepo.save(user);
+
+            // Send confirmation email
+            // Prepare email content
+
+            Map <String , Object> variables = new HashMap<>();
+            variables.put("email",user.getEmail());
+
+            EmailDetails emailDetails = new EmailDetails();
+            emailDetails.setRecipient(user.getEmail());
+            emailDetails.setSubject("Email Verification - Edtech");
+            // emailDetails.setMsgBody("Your OTP is: " + otpCode);
+            emailDetails.setHtmlTemplate("PasswordUpdate-template"); // must exist in templates/
+            emailDetails.setVariables(variables);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Password updated successfully"));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Error occurred while updating password", "error", e.getMessage()));
+        }
+
+    }
 }

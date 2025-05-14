@@ -2,7 +2,6 @@ package com.edtech.auth.Services;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,11 +22,6 @@ public class OTPService {
     
 
     public String generateOTP(String email) {
-
-        Optional<OTP> existing = otpRepo.findByEmail(email);
-        if (existing.isPresent()) {
-            return "User already registered or OTP already sent";
-        }
         
         // Implement OTP generation logic (6-digit OTP, can be random)
         int otpCode = (int) (Math.random() * 900000) + 100000; // Generate 6-digit OTP
@@ -52,5 +46,7 @@ public class OTPService {
 
 
     }
+
+    
     
 }

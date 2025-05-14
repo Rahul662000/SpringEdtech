@@ -1,5 +1,6 @@
 package com.edtech.auth.DTO;
 
+import com.edtech.auth.Model.AdditionalDetails;
 import com.edtech.auth.Model.Users;
 
 import lombok.AllArgsConstructor;
@@ -18,6 +19,7 @@ public class UserDto {
     private String image;
     private boolean active;
     private boolean approved;
+    private AdditionalDetails userProfile;
 
     private String gender;
     private String dateOfBirth;
@@ -33,12 +35,14 @@ public class UserDto {
         this.image = user.getImage();
         this.active = user.isActive();
         this.approved = user.isApproved();
+        this.userProfile = user.getUserProfile();
 
-        if (user.getUserProfile() != null) {
-            this.gender = user.getUserProfile().getGender();
-            this.dateOfBirth = user.getUserProfile().getDateOfBirth();
-            this.about = user.getUserProfile().getAbout();
-            this.contact = user.getUserProfile().getContactNumber();
-        }
+
+        // if (user.getUserProfile() != null) {
+        //     this.gender = user.getUserProfile().getGender();
+        //     this.dateOfBirth = user.getUserProfile().getDateOfBirth();
+        //     this.about = user.getUserProfile().getAbout();
+        //     this.contact = user.getUserProfile().getContactNumber();
+        // }
     }
 }

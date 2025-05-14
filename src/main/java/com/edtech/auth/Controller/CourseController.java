@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -35,12 +36,16 @@ import com.edtech.auth.Model.Users;
 import com.edtech.auth.Repo.CategoryRepo;
 import com.edtech.auth.Repo.CourseProgressRepo;
 import com.edtech.auth.Repo.CourseRepo;
+import com.edtech.auth.Repo.SectionRepo;
 import com.edtech.auth.Repo.UserRepo;
 import com.edtech.auth.Services.JWTService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import com.edtech.auth.Repo.SubSectionRepo;
 
 
 @RestController
@@ -62,6 +67,12 @@ public class CourseController {
 
     @Autowired
     CourseProgressRepo courseProgressRepo;
+
+    @Autowired
+    SubSectionRepo subSectionRepo;
+
+    @Autowired
+    SectionRepo sectionRepo;
 
     @PostMapping("/createCourse")
     public ResponseEntity<?> createCourse(@ModelAttribute CourseRequestDto requestDto, 
@@ -207,7 +218,7 @@ public class CourseController {
     }
 
     @GetMapping("/getInstructorCourses")
-    public ResponseEntity<?> getInstructorCourses( @RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> getInstructorCourses(@RequestHeader("Authorization") String token) {
 
         try {
             String jwtToken = token.substring(7);
@@ -237,71 +248,54 @@ public class CourseController {
 
     }
 
-    @PostMapping("/getFullCourseDetails")
-    public ResponseEntity<?> getFullCourseDetails(@RequestBody Map<String, String> request , @RequestHeader("Authorization") String token) {
-    try {
-        String jwtToken = token.substring(7);
+    @DeleteMapping("/deleteCourse")
+    public ResponseEntity<?> deleteCourse(@RequestBody Map<String,String> request , @RequestHeader("Authorization") String token){
+
+        try{
+
+            String jwtToken = token.substring(7);
             String userId = jwtService.extractId(jwtToken);
             String accountType = jwtService.extractAccountType(jwtToken);
         
-        if (!accountType.equalsIgnoreCase("INSTRUCTOR")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only instructors can access Instructor Courses.");
-        }
-
-        Long instructorId = Long.parseLong(userId);
-        Long courseId = Long.parseLong(request.get("courseId"));
-        // String userEmail = principal.getName(); // assumes Spring Security with email-based login
-
-        // Fetch user
-        Users user = userRepo.findById(instructorId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Fetch course with all necessary joins (use custom JPQL or projections if needed)
-        Course courseDetails = courseRepo.findCourseWithDetailsById(courseId)
-                .orElseThrow(() -> new RuntimeException("Course not found"));
-
-        // Get Course Progress
-        Optional<CourseProgress> progressOpt = courseProgressRepo.findByCourseIdAndUserId(courseId, user.getId());
-
-         // Calculate total duration without using streams
-        int totalDurationInSeconds = 0;
-        for (Section section : courseDetails.getCourseContent()) {
-            for (SubSection subSection : section.getSubSection()) {
-                try {
-                    totalDurationInSeconds += Integer.parseInt(subSection.getTimeDuration());
-                } catch (NumberFormatException e) {
-                    // You can log or handle the invalid duration format here if needed
-                }
+            if (!accountType.equalsIgnoreCase("INSTRUCTOR")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only instructors can access Instructor Courses.");
             }
+
+            Long instructorId = Long.parseLong(userId);
+            Long courseId = Long.parseLong(request.get("courseId"));
+            Optional<Course> optionalCourse = courseRepo.findById(courseId);
+
+            Course course = optionalCourse.get();
+            
+            // Clear enrolled students
+            course.getEnrolledStudents().clear();
+
+            // Delete subsections and sections
+            for (Section section : course.getCourseContent()) {
+                for (SubSection subSection : section.getSubSection()) {
+                    subSectionRepo.delete(subSection);
+                }
+                sectionRepo.delete(section);
+            }
+
+
+            // Delete course
+            courseRepo.delete(course);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Course deleted successfully"));
+
         }
+        catch(Exception e){
 
-        String formattedDuration = convertSecondsToDuration(totalDurationInSeconds);
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Server error",
+                "error", e.getMessage()
+            ));
 
-        // Response DTO
-        FullCourseDetailsResponse response = new FullCourseDetailsResponse(
-            courseDetails,
-            formattedDuration,
-            progressOpt.map(CourseProgress::getCompletedVideos).orElse(List.of())
-        );
-
-        return ResponseEntity.ok().body(Map.of("success", true, "data", response));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", e.getMessage()));
         }
 
     }
 
-    private String convertSecondsToDuration(int totalSeconds) {
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        int seconds = totalSeconds % 60;
-
-        StringBuilder duration = new StringBuilder();
-        if (hours > 0) duration.append(hours).append("h ");
-        if (minutes > 0 || hours > 0) duration.append(minutes).append("m ");
-        duration.append(seconds).append("s");
-
-        return duration.toString().trim();
-    }
 }

@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,14 +18,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import lombok.Data;
-import net.minidev.json.annotate.JsonIgnore;
 
 @Data
 @Entity
@@ -45,7 +42,7 @@ public class Course {
     @JoinColumn(name = "instructor_id", referencedColumnName = "id")
     // @JsonManagedReference("course-instructor")
     // @JsonBackReference
-    @JsonIgnore
+    @JsonIgnoreProperties({"courses", "enrolledCourses", "courseProgress", "userProfile"})
     private Users instructor;
 
     @Column(length = 1000)
@@ -57,7 +54,7 @@ public class Course {
     private List<Section> courseContent = new ArrayList<>();
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("course")
+    @JsonIgnoreProperties({"course","user"})
     private List<RatingAndReview> ratingAndReview = new ArrayList<>();
 
     private Double price;
@@ -70,12 +67,8 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "category_id")
     // @JsonBackReference
-    @JsonIgnoreProperties("course")
+    @JsonBackReference
     private Category category;
-
-    @ManyToMany
-    @JsonIgnoreProperties
-    private List<Users> enrolledStudents;
 
     @ElementCollection
     private List<String> instructions;
@@ -95,6 +88,8 @@ public class Course {
         return "Course [courseContent=" + courseContent + "]";
     }
     
+    @ManyToMany
+    private List<Users> enrolledStudents;
 
     
 
